@@ -79,7 +79,8 @@ with col1:
 with col2:
     st.markdown("### 🩺 Health Metrics")
     bmi = st.number_input("Body Mass Index (BMI)", min_value=10.0, max_value=60.0, value=25.0, step=0.1, format="%.1f")
-    children = st.spinbox("Number of Dependents / Children", min_value=0, max_value=10, value=0, step=1)
+    # FIX: Changed st.spinbox to st.number_input with step=1 for integer selection
+    children = st.number_input("Number of Dependents / Children", min_value=0, max_value=10, value=0, step=1)
 
 with col3:
     st.markdown("### 🚬 Habits & Geography")
@@ -105,7 +106,6 @@ if predict_btn:
         # Northeast behaves as our reference baseline (0,0,0)
         
         # Structure the baseline input exactly as it was organized during your model training:
-        # [age, bmi, children, sex_male, smoker_yes, region_nw, region_se, region_sw]
         raw_features = np.array([[age, bmi, children, sex_male, smoker_yes, region_northwest, region_southeast, region_southwest]])
         
         # Expand inputs using Degree 2 to hit your required 27 features target
@@ -114,8 +114,7 @@ if predict_btn:
         
         # Verify feature alignments
         if transformed_features.shape[1] != model.n_features_in_:
-            # Fallback handling: If your dataset included fewer columns, we gracefully alter transformation array 
-            # by removing region elements to guarantee alignment.
+            # Fallback handling: If your dataset omitted region tracking columns during encoding
             raw_features_alt = np.array([[age, bmi, children, sex_male, smoker_yes]])
             transformed_features = poly.fit_transform(raw_features_alt)
 
@@ -125,7 +124,7 @@ if predict_btn:
         # Handle extraction safely
         if isinstance(prediction, (np.ndarray, list)):
             prediction = prediction[0]
-        if isinstance(prediction, (np.ndarray, list)): # Deep nested handling
+        if isinstance(prediction, (np.ndarray, list)): 
             prediction = prediction[0]
 
         # Present calculation
@@ -137,4 +136,3 @@ if predict_btn:
 
     except Exception as e:
         st.error(f"Prediction Pipeline Error: {e}")
-        st.info("Ensure that your initial training configuration matched the standard [age, bmi, children, sex, smoker, region] layout structure.")
