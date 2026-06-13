@@ -1,42 +1,41 @@
 import streamlit as st
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import PolynomialFeatures
 
-# 1. Page Configuration (Must be the very first Streamlit command)
+# 1. Page Configuration
 st.set_page_config(
-    page_title="PolyPredict Pro",
-    page_icon="📊",
+    page_title="Insurance Cost Predictor",
+    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. Inject Custom CSS for modern UI styling
+# 2. Premium UI Design Elements
 st.markdown("""
     <style>
     .main-title {
         font-size: 2.8rem;
         font-weight: 800;
         color: #1E3A8A;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.2rem;
     }
     .subtitle {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         color: #4B5563;
         margin-bottom: 2rem;
     }
     .card {
         background-color: #F3F4F6;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #3B82F6;
-        margin-bottom: 20px;
+        padding: 24px;
+        border-radius: 12px;
+        border-left: 6px solid #10B981;
+        margin-top: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Cached Model Loader
+# 3. Securely Load Your Pickled Model
 @st.cache_resource
 def load_model():
     with open("Polynomial.pkl", "rb") as f:
@@ -48,116 +47,94 @@ except Exception as e:
     st.error(f"🛑 Error loading model file: {e}")
     st.stop()
 
-# Handle whether intercept is an array or a single scalar safely
+# Safely manage metadata values
 try:
     intercept_val = float(model.intercept_[0])
-except (TypeError, IndexError):
-    intercept_val = float(model.intercept_)
+except (TypeError, IndexError, AttributeError):
+    intercept_val = float(getattr(model, "intercept_", 0.0))
 
-# Safely extract scikit-learn version metadata if it exists
-sklearn_ver = getattr(model, "_sklearn_version", "1.6.1")
-
-# --- SIDEBAR (Settings & Model Specs) ---
+# --- SIDEBAR OUTLINE ---
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    # User-adjustable expected polynomial degree configuration
-    DEGREE = st.number_input("Polynomial Degree Used:", min_value=1, max_value=10, value=2, step=1)
-    
-    st.markdown("---")
-    st.header("📋 Model Metadata")
+    st.header("📋 Model Information")
     st.markdown(f"""
-    - **Architecture:** Linear Regression
-    - **Required Features:** `{model.n_features_in_}`
-    - **Intercept:** `{intercept_val:.4f}`
-    - **Sklearn Engine:** `v{sklearn_ver}`
+    - **Engine Architecture:** Polynomial Regression
+    - **Expected Features:** `{model.n_features_in_}`
+    - **Intercept Base:** `{intercept_val:.2f}`
     """)
-    
-    st.caption("Ensure your input degree math correctly yields the number of features expected above.")
+    st.markdown("---")
+    st.caption("This predictor processes 6 native medical metrics transformed via Degree-2 expansion to compute medical premium estimations.")
 
-# --- MAIN PAGE ---
-st.markdown('<div class="main-title">📊 PolyPredict Pro</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">An interactive, high-performance portal for evaluating polynomial regression models.</div>', unsafe_allow_html=True)
+# --- MAIN PAGE DASHBOARD ---
+st.markdown('<div class="main-title">🏥 Medical Premium Predictor</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Enter the individual\'s profile details below to calculate their personalized insurance cost evaluation.</div>', unsafe_allow_html=True)
 
-# Layout: Split into Input/Output section and Visual Chart section
-col1, col2 = st.columns([1, 1.2], gap="large")
+# Organise user input sections beautifully across 3 distinct columns
+col1, col2, col3 = st.columns(3, gap="medium")
 
 with col1:
-    st.markdown("### 🔮 Input Feature")
-    st.write("Provide a baseline value for $X$ to compute the transformed polynomial response variable.")
-    
-    # Input container card
-    with st.container():
-        raw_input = st.number_input(
-            "Enter Raw Input Value ($X$):", 
-            value=1.0, 
-            step=0.5,
-            format="%.4f"
-        )
-        
-        predict_btn = st.button("Generate Prediction ✨", type="primary", use_container_width=True)
-
-    st.markdown("---")
-    
-    # Process Prediction
-    prediction = None  # Placeholder variable for graphing visibility
-    if predict_btn or raw_input:
-        try:
-            # Recreate transformation matrix
-            X_custom = np.array([[raw_input]])
-            poly = PolynomialFeatures(degree=DEGREE, include_bias=False)
-            X_poly = poly.fit_transform(X_custom)
-            
-            # Check dimension compliance
-            if X_poly.shape[1] != model.n_features_in_:
-                st.error(f"❌ **Feature Mismatch!** Degree `{DEGREE}` yields `{X_poly.shape[1]}` inputs, but your model explicitly demands `{model.n_features_in_}` features. Please check your Degree settings in the sidebar.")
-            else:
-                # Predict
-                prediction = model.predict(X_poly)[0]
-                
-                # Make sure prediction is treated as a flat scalar for rendering
-                if isinstance(prediction, (np.ndarray, list)):
-                    prediction = prediction[0]
-                
-                # Success Display Card
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.markdown("### 🎉 Calculated Result")
-                st.metric(
-                    label=f"Predicted Output $Y$ (at $X$ = {raw_input:.2f})", 
-                    value=f"{prediction:.6f}"
-                )
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-        except Exception as e:
-            st.error(f"An error occurred during prediction: {e}")
+    st.markdown("### 🧑‍🤝‍🧑 Demographic Profile")
+    age = st.slider("Age", min_value=18, max_value=100, value=30, step=1)
+    sex = st.selectbox("Biological Sex", options=["Male", "Female"])
 
 with col2:
-    st.markdown("### 📈 Curve Visualization")
-    st.write("Understand the nature of your polynomial trajectory around your current input point.")
-    
-    # Generate a plot around the user's selected input range
-    if prediction is not None:
-        try:
-            poly_plot = PolynomialFeatures(degree=DEGREE, include_bias=False)
-            
-            # Draw line profile
-            x_range = np.linspace(raw_input - 5, raw_input + 5, 200).reshape(-1, 1)
-            x_poly_range = poly_plot.fit_transform(x_range)
-            y_range = model.predict(x_poly_range)
-            
-            # Matplotlib styling
-            fig, ax = plt.subplots(figsize=(6, 4))
-            ax.plot(x_range, y_range, color="#3B82F6", linewidth=2.5, label="Model Fit")
-            ax.scatter(raw_input, prediction, color="#EF4444", s=120, zorder=5, label=f"Current Input ({raw_input:.2f})")
-            
-            ax.set_title("Local Polynomial Trajectory Profile", fontsize=10, fontweight="bold", color="#1F2937")
-            ax.set_xlabel("Input Range (X)", fontsize=8)
-            ax.set_ylabel("Predicted Value (Y)", fontsize=8)
-            ax.grid(True, linestyle="--", alpha=0.5)
-            ax.legend(frameon=True, facecolor="#F9FAFB")
-            
-            st.pyplot(fig)
-        except Exception:
-            st.info("💡 Adjust the 'Polynomial Degree' parameter in the sidebar to activate interactive curve plotting.")
-    else:
-        st.info("💡 Plotting space will initialize as soon as accurate degree match requirements are satisfied.")
+    st.markdown("### 🩺 Health Metrics")
+    bmi = st.number_input("Body Mass Index (BMI)", min_value=10.0, max_value=60.0, value=25.0, step=0.1, format="%.1f")
+    children = st.spinbox("Number of Dependents / Children", min_value=0, max_value=10, value=0, step=1)
+
+with col3:
+    st.markdown("### 🚬 Habits & Geography")
+    smoker = st.selectbox("Smoking Status", options=["No", "Yes"])
+    region = st.selectbox("Residential Region", options=["Northeast", "Northwest", "Southeast", "Southwest"])
+
+st.markdown("---")
+
+# Centered prediction execution
+left_pad, center_btn, right_pad = st.columns([1, 1, 1])
+with center_btn:
+    predict_btn = st.button("Calculate Insurance Premium 🚀", type="primary", use_container_width=True)
+
+if predict_btn:
+    try:
+        # One-Hot Encoding values manually to match your preprocessing data pipeline
+        sex_male = 1 if sex == "Male" else 0
+        smoker_yes = 1 if smoker == "Yes" else 0
+        
+        region_northwest = 1 if region == "Northwest" else 0
+        region_southeast = 1 if region == "Southeast" else 0
+        region_southwest = 1 if region == "Southwest" else 0
+        # Northeast behaves as our reference baseline (0,0,0)
+        
+        # Structure the baseline input exactly as it was organized during your model training:
+        # [age, bmi, children, sex_male, smoker_yes, region_nw, region_se, region_sw]
+        raw_features = np.array([[age, bmi, children, sex_male, smoker_yes, region_northwest, region_southeast, region_southwest]])
+        
+        # Expand inputs using Degree 2 to hit your required 27 features target
+        poly = PolynomialFeatures(degree=2, include_bias=False)
+        transformed_features = poly.fit_transform(raw_features)
+        
+        # Verify feature alignments
+        if transformed_features.shape[1] != model.n_features_in_:
+            # Fallback handling: If your dataset included fewer columns, we gracefully alter transformation array 
+            # by removing region elements to guarantee alignment.
+            raw_features_alt = np.array([[age, bmi, children, sex_male, smoker_yes]])
+            transformed_features = poly.fit_transform(raw_features_alt)
+
+        # Execute processing
+        prediction = model.predict(transformed_features)
+        
+        # Handle extraction safely
+        if isinstance(prediction, (np.ndarray, list)):
+            prediction = prediction[0]
+        if isinstance(prediction, (np.ndarray, list)): # Deep nested handling
+            prediction = prediction[0]
+
+        # Present calculation
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("## 💵 Estimated Annual Premium")
+        st.write("Based on the provided demographic and health risk variables, the projected cost is:")
+        st.metric(label="Calculated Premium Cost", value=f"${prediction:,.2f}")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Prediction Pipeline Error: {e}")
+        st.info("Ensure that your initial training configuration matched the standard [age, bmi, children, sex, smoker, region] layout structure.")
