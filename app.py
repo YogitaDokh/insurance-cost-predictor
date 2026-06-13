@@ -54,6 +54,9 @@ try:
 except (TypeError, IndexError):
     intercept_val = float(model.intercept_)
 
+# Safely extract scikit-learn version metadata if it exists
+sklearn_ver = getattr(model, "_sklearn_version", "1.6.1")
+
 # --- SIDEBAR (Settings & Model Specs) ---
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -67,7 +70,7 @@ with st.sidebar:
     - **Architecture:** Linear Regression
     - **Required Features:** `{model.n_features_in_}`
     - **Intercept:** `{intercept_val:.4f}`
-    - **Sklearn Engine:** `v{model._sklearn_version}`
+    - **Sklearn Engine:** `v{sklearn_ver}`
     """)
     
     st.caption("Ensure your input degree math correctly yields the number of features expected above.")
@@ -126,7 +129,7 @@ with col1:
                 st.markdown('</div>', unsafe_allow_html=True)
                 
         except Exception as e:
-            st.error(f"An evaluation anomaly occurred: {e}")
+            st.error(f"An error occurred during prediction: {e}")
 
 with col2:
     st.markdown("### 📈 Curve Visualization")
