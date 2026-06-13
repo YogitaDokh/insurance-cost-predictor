@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import PolynomialFeatures
 
-# 1. Page Configuration (Must be first)
+# 1. Page Configuration (Must be the very first Streamlit command)
 st.set_page_config(
     page_title="PolyPredict Pro",
     page_icon="📊",
@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern typography and clean UI card styling
+# 2. Inject Custom CSS for modern UI styling (Fixed argument syntax)
 st.markdown("""
     <style>
     .main-title {
@@ -34,9 +34,9 @@ st.markdown("""
         margin-bottom: 20px;
     }
     </style>
-""", unsafe_allowed_html=True)
+""", unsafe_allow_html=True)
 
-# 2. Cached Model Loader 
+# 3. Cached Model Loader
 @st.cache_resource
 def load_model():
     with open("Polynomial.pkl", "rb") as f:
@@ -52,19 +52,19 @@ except Exception as e:
 with st.sidebar:
     st.header("⚙️ Configuration")
     
-    # Let users easily tweak the expected degree contextually
+    # User-adjustable expected polynomial degree configuration
     DEGREE = st.number_input("Polynomial Degree Used:", min_value=1, max_value=10, value=2, step=1)
     
     st.markdown("---")
-    st.header("📋 Model Metadata ")
+    st.header("📋 Model Metadata")
     st.markdown(f"""
-    - **Architecture:** Linear Regression 
-    - **Required Features:** `{model.n_features_in_}` 
-    - **Intercept:** `{model.intercept_[0]:.4f}` 
-    - **Sklearn Engine:** `v{model._sklearn_version}` 
+    - **Architecture:** Linear Regression
+    - **Required Features:** `{model.n_features_in_}`
+    - **Intercept:** `{model.intercept_[0]:.4f}`
+    - **Sklearn Engine:** `v{model._sklearn_version}`
     """)
     
-    st.caption("Ensure your degree matches the exact number of features expected above.")
+    st.caption("Ensure your input degree math correctly yields the number of features expected above.")
 
 # --- MAIN PAGE ---
 st.markdown('<div class="main-title">📊 PolyPredict Pro</div>', unsafe_allowed_html=True)
@@ -91,6 +91,7 @@ with col1:
     st.markdown("---")
     
     # Process Prediction
+    prediction = None  # Placeholder variable for graphing visibility
     if predict_btn or raw_input:
         try:
             # Recreate transformation matrix
@@ -98,21 +99,21 @@ with col1:
             poly = PolynomialFeatures(degree=DEGREE, include_bias=False)
             X_poly = poly.fit_transform(X_custom)
             
-            # Check dimension compliance 
+            # Check dimension compliance
             if X_poly.shape[1] != model.n_features_in_:
                 st.error(f"❌ **Feature Mismatch!** Degree `{DEGREE}` yields `{X_poly.shape[1]}` inputs, but your model explicitly demands `{model.n_features_in_}` features. Please check your Degree settings in the sidebar.")
             else:
-                # Predict 
+                # Predict
                 prediction = model.predict(X_poly)[0]
                 
                 # Success Display Card
-                st.markdown('<div class="card">', unsafe_allowed_html=True)
+                st.markdown('<div class="card">', unsafe_allow_html=True)
                 st.markdown("### 🎉 Calculated Result")
                 st.metric(
                     label=f"Predicted Output $Y$ (at $X$ = {raw_input:.2f})", 
                     value=f"{prediction:.6f}"
                 )
-                st.markdown('</div>', unsafe_allowed_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
                 
         except Exception as e:
             st.error(f"An evaluation anomaly occurred: {e}")
@@ -122,11 +123,11 @@ with col2:
     st.write("Understand the nature of your polynomial trajectory around your current input point.")
     
     # Generate a plot around the user's selected input range
-    try:
-        poly_plot = PolynomialFeatures(degree=DEGREE, include_bias=False)
-        
-        # Test if it complies with structural inputs first 
-        if poly_plot.fit_transform(np.array([[0]])).shape[1] == model.n_features_in_:
+    if prediction is not None:
+        try:
+            poly_plot = PolynomialFeatures(degree=DEGREE, include_bias=False)
+            
+            # Draw line profile
             x_range = np.linspace(raw_input - 5, raw_input + 5, 200).reshape(-1, 1)
             x_poly_range = poly_plot.fit_transform(x_range)
             y_range = model.predict(x_poly_range)
@@ -143,7 +144,7 @@ with col2:
             ax.legend(frameon=True, facecolor="#F9FAFB")
             
             st.pyplot(fig)
-        else:
+        except Exception:
             st.info("💡 Adjust the 'Polynomial Degree' parameter in the sidebar to activate interactive curve plotting.")
-    except Exception:
+    else:
         st.info("💡 Plotting space will initialize as soon as accurate degree match requirements are satisfied.")
