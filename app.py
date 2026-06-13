@@ -74,18 +74,17 @@ col1, col2, col3 = st.columns(3, gap="medium")
 with col1:
     st.markdown("### 🧑‍🤝‍🧑 Demographic Profile")
     age = st.slider("Age", min_value=18, max_value=100, value=30, step=1)
-    sex = st.selectbox("Biological Sex", options=["Male", "Female"])
+    sex = st.selectbox("Biological Sex", options=["Female", "Male"])
 
 with col2:
     st.markdown("### 🩺 Health Metrics")
     bmi = st.number_input("Body Mass Index (BMI)", min_value=10.0, max_value=60.0, value=25.0, step=0.1, format="%.1f")
-    # FIX: Changed st.spinbox to st.number_input with step=1 for integer selection
     children = st.number_input("Number of Dependents / Children", min_value=0, max_value=10, value=0, step=1)
 
 with col3:
     st.markdown("### 🚬 Habits & Geography")
     smoker = st.selectbox("Smoking Status", options=["No", "Yes"])
-    region = st.selectbox("Residential Region", options=["Northeast", "Northwest", "Southeast", "Southwest"])
+    region = st.selectbox("Residential Region", options=["northeast", "northwest", "southeast", "southwest"])
 
 st.markdown("---")
 
@@ -96,32 +95,25 @@ with center_btn:
 
 if predict_btn:
     try:
-        # One-Hot Encoding values manually to match your preprocessing data pipeline
-        sex_male = 1 if sex == "Male" else 0
-        smoker_yes = 1 if smoker == "Yes" else 0
+        # --- LABEL ENCODING MAPS ---
+        # Map categories to single numeric values (0, 1, 2...) instead of splitting into binary columns
+        sex_numeric = 1 if sex == "Male" else 0
+        smoker_numeric = 1 if smoker == "Yes" else 0
         
-        region_northwest = 1 if region == "Northwest" else 0
-        region_southeast = 1 if region == "Southeast" else 0
-        region_southwest = 1 if region == "Southwest" else 0
-        # Northeast behaves as our reference baseline (0,0,0)
+        region_map = {"northeast": 0, "northwest": 1, "southeast": 2, "southwest": 3}
+        region_numeric = region_map[region]
         
-        # Structure the baseline input exactly as it was organized during your model training:
-        raw_features = np.array([[age, bmi, children, sex_male, smoker_yes, region_northwest, region_southeast, region_southwest]])
+        # This creates exactly 6 features as a base: [age, bmi, children, sex, smoker, region]
+        raw_features = np.array([[age, bmi, children, sex_numeric, smoker_numeric, region_numeric]])
         
-        # Expand inputs using Degree 2 to hit your required 27 features target
+        # Expand inputs using Degree 2 (6 inputs -> 27 features)
         poly = PolynomialFeatures(degree=2, include_bias=False)
         transformed_features = poly.fit_transform(raw_features)
         
-        # Verify feature alignments
-        if transformed_features.shape[1] != model.n_features_in_:
-            # Fallback handling: If your dataset omitted region tracking columns during encoding
-            raw_features_alt = np.array([[age, bmi, children, sex_male, smoker_yes]])
-            transformed_features = poly.fit_transform(raw_features_alt)
-
         # Execute processing
         prediction = model.predict(transformed_features)
         
-        # Handle extraction safely
+        # Handle shape structure safely
         if isinstance(prediction, (np.ndarray, list)):
             prediction = prediction[0]
         if isinstance(prediction, (np.ndarray, list)): 
