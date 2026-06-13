@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Inject Custom CSS for modern UI styling (Fixed argument syntax)
+# 2. Inject Custom CSS for modern UI styling
 st.markdown("""
     <style>
     .main-title {
@@ -48,6 +48,12 @@ except Exception as e:
     st.error(f"🛑 Error loading model file: {e}")
     st.stop()
 
+# Handle whether intercept is an array or a single scalar safely
+try:
+    intercept_val = float(model.intercept_[0])
+except (TypeError, IndexError):
+    intercept_val = float(model.intercept_)
+
 # --- SIDEBAR (Settings & Model Specs) ---
 with st.sidebar:
     st.header("⚙️ Configuration")
@@ -60,15 +66,15 @@ with st.sidebar:
     st.markdown(f"""
     - **Architecture:** Linear Regression
     - **Required Features:** `{model.n_features_in_}`
-    - **Intercept:** `{model.intercept_[0]:.4f}`
+    - **Intercept:** `{intercept_val:.4f}`
     - **Sklearn Engine:** `v{model._sklearn_version}`
     """)
     
     st.caption("Ensure your input degree math correctly yields the number of features expected above.")
 
 # --- MAIN PAGE ---
-st.markdown('<div class="main-title">📊 PolyPredict Pro</div>', unsafe_allowed_html=True)
-st.markdown('<div class="subtitle">An interactive, high-performance portal for evaluating polynomial regression models.</div>', unsafe_allowed_html=True)
+st.markdown('<div class="main-title">📊 PolyPredict Pro</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">An interactive, high-performance portal for evaluating polynomial regression models.</div>', unsafe_allow_html=True)
 
 # Layout: Split into Input/Output section and Visual Chart section
 col1, col2 = st.columns([1, 1.2], gap="large")
@@ -105,6 +111,10 @@ with col1:
             else:
                 # Predict
                 prediction = model.predict(X_poly)[0]
+                
+                # Make sure prediction is treated as a flat scalar for rendering
+                if isinstance(prediction, (np.ndarray, list)):
+                    prediction = prediction[0]
                 
                 # Success Display Card
                 st.markdown('<div class="card">', unsafe_allow_html=True)
